@@ -1,6 +1,7 @@
 ﻿using System;
+using Code.Config;
 
-namespace Code.Config
+namespace Config
 {
 public class Config : IConfig
 {
