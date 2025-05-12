@@ -23,3 +23,46 @@ Leverage a pluggable parser to load your `IConfigPage` instances—synchronously
 - **Type-based Retrieval**  
   ```csharp
   T page = config.GetConfigPage<TPage>();
+
+## 📦 Project Structure
+
+```plaintext
+Azzazelloqq.Config/
+├── src/
+│   ├── Azzazelloqq.Config/
+│   │   ├── Config.cs              // Core container
+│   │   ├── IConfig.cs             // Public interface
+│   │   ├── IConfigParser.cs       // Parser interface
+│   │   ├── IConfigPage.cs         // Marker for pages
+│   │   └── IRemotePage.cs         // Optional tag for “raw” data pages
+├── examples/
+│   ├── ConsoleAppExample/         // .NET Core app demo
+│   └── UnityExample/              // Unity project demo
+└── LICENSE
+```
+---
+
+## 🚀 Quick Start
+
+### 1. Define your pages
+```csharp
+public interface IGameSettingsPage : IConfigPage
+{
+    float MasterVolume { get; }
+    int MaxPlayers    { get; }
+}
+```
+### 2. Implement a parser
+```csharp
+public class JsonConfigParser : IConfigParser
+{
+    public IConfigPage[] Parse()
+    {
+        // Load JSON files, map to concrete pages
+        return new IConfigPage[] { new GameSettingsPage(...), /* … */ };
+    }
+
+    public Task<IConfigPage[]> ParseAsync(CancellationToken token)
+        => Task.Run(Parse, token);
+}
+```
