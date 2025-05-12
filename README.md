@@ -35,9 +35,6 @@ Azzazelloqq.Config/
 │   │   ├── IConfigParser.cs       // Parser interface
 │   │   ├── IConfigPage.cs         // Marker for pages
 │   │   └── IRemotePage.cs         // Optional tag for “raw” data pages
-├── examples/
-│   ├── ConsoleAppExample/         // .NET Core app demo
-│   └── UnityExample/              // Unity project demo
 └── LICENSE
 ```
 ---
