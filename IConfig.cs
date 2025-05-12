@@ -1,7 +1,14 @@
-﻿namespace Code.Config
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace Azzazelloqq.Config
 {
 public interface IConfig
 {
-	public T GetData<T>() where T : IConfigData;
+	public bool IsInitialized { get; }
+
+	public void Initialize();
+	public Task InitializeAsync(CancellationToken token);
+	public T GetConfigPage<T>() where T : IConfigPage;
 }
 }

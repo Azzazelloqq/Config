@@ -1,7 +1,11 @@
-﻿namespace Code.Config
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace Azzazelloqq.Config
 {
 public interface IConfigParser
 {
-	public IConfigData[] Parse();
+	public IConfigPage[] Parse();
+	public Task<IConfigPage[]> ParseAsync(CancellationToken token);
 }
 }
