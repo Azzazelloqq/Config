@@ -1,7 +1,7 @@
 # Azzazazelloqq.Config 🗂️
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)  
-[![GitHub Release](https://img.shields.io/github/release/Azzazelloqq/Azzazelloqq.Config.svg?style=flat-square&cacheSeconds=86400)](https://github.com/Azzazelloqq/Azzazelloqq.Config/releases)
+[![GitHub release (latest by SemVer)](https://img.shields.io/github/release/Azzazelloqq/Config.svg?style=flat-square&cacheSeconds=86400)](https://github.com/Azzazelloqq/Config/releases)
 
 A lightweight, type-safe configuration container for .NET and Unity projects.  
 Leverage a pluggable parser to load your `IConfigPage` instances—synchronously or asynchronously—and retrieve them by type with zero magic.
