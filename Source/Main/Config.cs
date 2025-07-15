@@ -23,7 +23,7 @@ public class Config : IConfig
 	{
 		if (IsInitialized)
 		{
-			throw new Exception("Config is already initialized");
+			throw new InvalidOperationException("Config is already initialized");
 		}
 
 		_configDataContainer = ParseConfig();
@@ -35,25 +35,34 @@ public class Config : IConfig
 	{
 		if (IsInitialized)
 		{
-			throw new Exception("Config is already initialized");
+			throw new InvalidOperationException("Config is already initialized");
 		}
+		
+		token.ThrowIfCancellationRequested();
 
 		_configDataContainer = await ParseConfigAsync(token);
+
+		IsInitialized = true;
 	}
 
 	public T GetConfigPage<T>() where T : IConfigPage
 	{
+		if (_configDataContainer == null)
+		{
+			throw new Exception("Config data container is null");
+		}
+		
 		if (!_configDataContainer.TryGetValue(typeof(T), out var data))
 		{
-			throw new Exception($"Need add data {typeof(T).Name} in {_configParser.GetType().Name}");
+			throw new KeyNotFoundException($"Need add data {typeof(T).Name} in {_configParser.GetType().Name}");
 		}
 
 		if (data is T concreteData)
 		{
 			return concreteData;
 		}
-
-		throw new Exception($"Config by type {typeof(T)} contains in container as different type {data.GetType()}");
+		
+		throw new InvalidCastException($"Config entry for {typeof(T).Name} is of type {data.GetType().Name}");
 	}
 
 	private Dictionary<Type, IConfigPage> ParseConfig()

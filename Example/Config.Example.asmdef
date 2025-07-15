@@ -1,0 +1,5 @@
+{
+	"name": "Config.Example",
+	"rootNamespace": "Azzazelloqq",
+	"references":[ "GUID:1d9516e6f01b24c47a72364509e55a7c" ]
+}
