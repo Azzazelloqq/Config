@@ -7,10 +7,11 @@ A lightweight, type-safe configuration container for .NET and Unity projects.
 Leverage pluggable parsers to load your `IConfigPage` instances—synchronously or asynchronously—and retrieve them by type with zero magic.
 
 > **Why use Azzazelloqq.Config?**
-> - Strongly-typed access: No fragile string keys—just `GetConfigPage<T>()`.
-> - Sync & Async Init: Call `Initialize()` or `InitializeAsync(token)` as fits your flow.
-> - Custom parsers: Plug in JSON, XML, ScriptableObjects or your own format via `IConfigParser`.
-> - Exception safety: Clear errors if you forget to initialize or ask for an unregistered page.
+> - Strongly‑typed access – no brittle string keys, just GetConfigPage<T>().
+> - Sync & Async init – use Initialize() or InitializeAsync(token) to fit your thread model.
+> - Pluggable parsers – JSON, XML, ScriptableObjects, remote APIs… implement IConfigParser once and plug it in.
+> - Dependency‑aware pipeline – declare page dependencies; we resolve order and execute independent stages in parallel.
+> - Clear diagnostics – explicit exceptions for duplicate pages, missing dependencies and circular graphs.
 
 ---
 
@@ -20,32 +21,54 @@ Leverage pluggable parsers to load your `IConfigPage` instances—synchronously 
   - `Initialize()` for blocking load flows  
   - `InitializeAsync(CancellationToken)` for off-UI-thread parsing  
 
-- **Type-based Retrieval**  
-  ```csharp
-  var page = config.GetConfigPage<MyConfigPage>();
-  ```
+- **Dependency‑Aware Execution**  
+ - Describe each page with an IParseExecutor (target type + dependency list).
+ - `SimpleResolver` topologically sorts executors, detecting cycles, duplicates and gaps.
+ - `DependencyAwareConfigParser` runs executors level‑by‑level—parallelising pages that have no outstanding dependencies (sync via `Parallel.Fo`r, async via `Task.WhenAll`).
 
-- **Pluggable Parsers**  
-  Implement `IConfigParser.Parse()` / `ParseAsync()` to support your data source.
+- **Type‑based Retrieval**  
+  `var page = config.GetConfigPage<MyConfigPage>();`
 
-- **Composite Parsers**  
-  Combine multiple parsers via `CompositeConfigParser` to aggregate pages from different sources.
+- **Pluggable & Composite Parsers**  
+  Mix and match data sources with CompositeConfigParser—combine JSON files, ScriptableObjects, executor pipelines, remote endpoints and more.
 
 ---
 
 ## 📦 Project Structure
 
 ```plaintext
-Azzazelloqq.Config/
-├── src/
-│   └── Azzazelloqq.Config/
-│       ├── Config.cs
-│       ├── IConfig.cs
-│       ├── IConfigParser.cs
-│       ├── IConfigPage.cs
-│       ├── IRemotePage.cs
-│       └── CompositeConfigParser.cs
-└── LICENSE
+Assets/Config/
+├── Config.asmdef                  # main assembly definition
+├── Source/                        # core library source
+│   ├── Main/
+│   │   ├── Config.cs
+│   │   └── IConfig.cs
+│   ├── Page/
+│   │   └── IConfigPage.cs
+│   ├── Parser/
+│   │   ├── CompositeConfigParser.cs
+│   │   ├── DependencyAwareConfigParser.cs
+│   │   ├── IConfigParser.cs
+│   │   └── IParseExecutor.cs
+│   └── Resolver/
+│       ├── IExecutorResolver.cs
+│       └── SimpleResolver.cs
+├── Example/                       # sample usage project
+│   ├── Config.Example.asmdef
+│   ├── ExamplePages/
+│   │   ├── GameSettingsPage.cs
+│   │   └── RemoteBalancePage.cs
+│   ├── ExampleParseExecutors/
+│   │   ├── GameSettingsExecutor.cs
+│   │   └── RemoteBalanceExecutor.cs
+│   └── Program.cs
+├── Tests/                         # NUnit tests for library
+│   ├── Config.Tests.asmdef
+│   ├── ConfigPipelineTests.cs
+│   └── DependencyAwareConfigParserTests.cs
+├── LICENSE
+├── package.json
+└── README.md
 ```
 
 ---
@@ -55,14 +78,45 @@ Azzazelloqq.Config/
 ### 1. Define your pages
 
 ```csharp
-public interface IGameSettingsPage : IConfigPage
+public class GameSettingsPage : IConfigPage
 {
-    float MasterVolume { get; }
-    int   MaxPlayers    { get; }
+    public int MaxPlayers   { get; }
+	  public float MusicVolume { get; }
+
+    public GameSettingsPage(int maxPlayers, float musicVolume)
+	  {
+		  MaxPlayers = maxPlayers;
+	  	MusicVolume = musicVolume;
+	  }
 }
 ```
 
-### 2. Implement a JSON parser
+### 2. (Optional) Describe page dependencies with executors
+
+If a page depends on data from others, wrap its creation in an IParseExecutor and list the required types:
+
+```csharp
+class GameSettingsExecutor : IParseExecutor
+{
+    public Type TargetType => typeof(GameSettingsPage);
+    public IReadOnlyCollection<Type> Dependencies => Array.Empty<Type>();
+
+    public IConfigPage Parse(IReadOnlyDictionary<Type, IConfigPage> ctx)
+        => LoadSettings();
+
+    public Task<IConfigPage> ParseAsync(
+        IReadOnlyDictionary<Type, IConfigPage> ctx,
+        CancellationToken ct) => Task.FromResult(Parse(ctx));
+
+    private static GameSettingsPage LoadSettings() => new()
+    {
+        MasterVolume = 0.8f,
+        MaxPlayers   = 4
+    };
+}
+```
+
+### 3.  Implement a JSON(Example) parser
 
 ```csharp
 using System.IO;
@@ -79,7 +133,7 @@ public class JsonConfigParser : IConfigParser
 
     public IConfigPage[] Parse()
     {
-        var json = File.ReadAllText(_filePath);
+        var json     = File.ReadAllText(_filePath);
         var settings = JsonConvert.DeserializeObject<GameSettingsPage>(json);
         return new IConfigPage[] { settings };
     }
@@ -89,47 +143,34 @@ public class JsonConfigParser : IConfigParser
 }
 ```
 
-### 3. Implement a ScriptableObject parser
-
-```csharp
-using System.Threading;
-using System.Threading.Tasks;
-using Azzazelloqq.Config;
-
-public class SoConfigParser : IConfigParser
-{
-    private readonly AudioSettingsRemotePage _soPage;
-
-    public SoConfigParser(AudioSettingsRemotePage soPage) => _soPage = soPage;
-
-    public IConfigPage[] Parse()
-    {
-        return new IConfigPage[] {
-            new AudioSettingsConfigPage(new AudioSettings {
-                MasterVolume = _soPage.MasterVolume,
-                MusicEnabled = _soPage.MusicEnabled
-            })
-        };
-    }
-
-    public Task<IConfigPage[]> ParseAsync(CancellationToken token)
-        => Task.FromResult(Parse());
-}
-```
-
 ### 4. Combine and initialize
 
 ```csharp
 var jsonParser = new JsonConfigParser("config.json");
-var soParser   = new SoConfigParser(audioSettingsSoAsset);
-var composite  = new CompositeConfigParser(jsonParser, soParser);
+
+// Dependency‑aware pipeline with executors
+var executors  = new IParseExecutor[] { new GameSettingsExecutor() };
+var depParser  = new DependencyAwareConfigParser(executors, new SimpleResolver());
+
+var composite  = new CompositeConfigParser(jsonParser, depParser);
 
 var config = new Config(composite);
 await config.InitializeAsync(cancellationToken);
 
-var gameSettings  = config.GetConfigPage<IGameSettingsPage>();
-var audioSettings = config.GetConfigPage<AudioSettingsConfigPage>();
+var gameSettings = config.GetConfigPage<GameSettingsPage>();
 ```
+
+---
+
+## ⚙️ Extending
+
+Custom Resolver Strategy
+
+Need priority ties or custom order? Implement IExecutorResolver and supply it to DependencyAwareConfigParser.
+
+Multiple Pipelines
+
+Nest parsers however you like—composites of dependency‑aware groups, or vice‑versa.
 
 ---
 
