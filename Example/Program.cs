@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.Plastic.Newtonsoft.Json;
+using UnityEngine;
 
 namespace Azzazelloqq.Config.Example
 {
@@ -69,7 +69,7 @@ internal class JsonFileParser : IConfigParser
 	public IConfigPage[] Parse()
 	{
 		var json     = File.ReadAllText(_filePath);
-		var settings = JsonConvert.DeserializeObject<GameSettingsPage>(json);
+		var settings = JsonUtility.FromJson<GameSettingsPage>(json);
 		return new IConfigPage[] { settings };
 	}
 
