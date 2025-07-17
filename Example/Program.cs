@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.Plastic.Antlr3.Runtime;
+using Unity.Plastic.Newtonsoft.Json;
 
 namespace Azzazelloqq.Config.Example
 {
@@ -34,7 +34,7 @@ public class Program
 	{
 		var token = _exampleTokenSource.Token;
 		
-		var composite = new CompositeConfigParser(new JsonFileParser(), new RemoteParser());
+		var composite = new CompositeConfigParser(new JsonFileParser(string.Empty), new RemoteParser());
 
 		var config = new Config(composite);
 		await config.InitializeAsync(token);
@@ -59,14 +59,21 @@ internal class RemoteParser : IConfigParser
 
 internal class JsonFileParser : IConfigParser
 {
+	private readonly string _filePath;
+
+	public JsonFileParser(string filePath)
+	{
+		_filePath = filePath;
+	}
+
 	public IConfigPage[] Parse()
 	{
-		return new IConfigPage[] { };
+		var json     = File.ReadAllText(_filePath);
+		var settings = JsonConvert.DeserializeObject<GameSettingsPage>(json);
+		return new IConfigPage[] { settings };
 	}
 
 	public Task<IConfigPage[]> ParseAsync(CancellationToken token)
-	{
-		return null;
-	}
+		=> Task.Run(Parse, token);
 }
 }
