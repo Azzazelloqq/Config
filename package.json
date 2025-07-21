@@ -1,6 +1,6 @@
 {
   "name": "com.azzazello.config",
-  "version": "1.0.52",
+  "version": "1.0.6",
   "displayName": "Config",
   "description": "Simple config",
   "unity": "2020.3",
