@@ -65,7 +65,8 @@ Assets/Config/
 ├── Tests/                         # NUnit tests for library
 │   ├── Config.Tests.asmdef
 │   ├── ConfigPipelineTests.cs
-│   └── DependencyAwareConfigParserTests.cs
+│   ├── ConfigPipelineTests.cs
+│   └── ConfigParserProgressTests.cs
 ├── LICENSE
 ├── package.json
 └── README.md
@@ -160,6 +161,28 @@ await config.InitializeAsync(cancellationToken);
 var gameSettings = config.GetConfigPage<GameSettingsPage>();
 ```
 
+### 5. Tracking Progress
+You can monitor parsing progress in two ways:
+```csharp
+// a) Using IProgress<ParseProgress>
+var progress = new Progress<ParseProgress>(p =>
+{
+    Console.WriteLine($"Progress: {p.Progress:P0} - {p.Message}");
+});
+
+var pages = await composite.ParseAsync(progress, cancellationToken);
+
+// b) Using callback style
+composite.ParseAsync(
+    p => Console.WriteLine($"Progress: {p.Progress:P0} - {p.Message}"),
+    pages => {
+        // All pages loaded
+        Console.WriteLine($"Loaded {pages.Length} pages.");
+    },
+    cancellationToken
+);
+
+```
 ---
 
 ## ⚙️ Extending
