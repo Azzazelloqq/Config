@@ -64,5 +64,42 @@ public sealed class CompositeConfigParser : IConfigParser
 
 		return combined;
 	}
+
+	public async Task<IConfigPage[]> ParseAsync(IProgress<ParseProgress> progress, CancellationToken token)
+	{
+		token.ThrowIfCancellationRequested();
+
+		token.ThrowIfCancellationRequested();
+		var allPages = new List<IConfigPage>();
+		int total = _parsers.Length, done = 0;
+
+		foreach (var parser in _parsers)
+		{
+			var pages = await parser.ParseAsync(token)
+						 .ConfigureAwait(false);
+			allPages.AddRange(pages);
+
+			done++;
+			progress?.Report(new ParseProgress(
+				(float)done / total,
+				$"Composite: parsed [{parser.GetType().Name}] ({done}/{total})"
+			));
+		}
+
+		return allPages.ToArray();
+	}
+
+	public void ParseAsync(Action<ParseProgress> progress, Action<IConfigPage[]> onParsed, CancellationToken token)
+	{
+		var prog = new Progress<ParseProgress>(progress);
+
+		_ = Task.Run(async () =>
+		{
+			token.ThrowIfCancellationRequested();
+			var result = await ParseAsync(prog, token)
+				.ConfigureAwait(false);
+			onParsed(result);
+		}, token);
+	}
 }
 }

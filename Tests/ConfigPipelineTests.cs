@@ -26,9 +26,9 @@ internal class ConfigPipelineTests
 	[Test]
 	public void Resolver_Returns_Topological_Order()
 	{
-		var execA = new FakeExecutor(typeof(PageA));
-		var execB = new FakeExecutor(typeof(PageB), typeof(PageA));
-		var execC = new FakeExecutor(typeof(PageC), typeof(PageB));
+		var execA = new FakeExecutorB(typeof(PageA));
+		var execB = new FakeExecutorB(typeof(PageB), typeof(PageA));
+		var execC = new FakeExecutorB(typeof(PageC), typeof(PageB));
 
 		var resolver = new SimpleResolver();
 		var sorted = resolver.Resolve(new IParseExecutor[] { execC, execB, execA });
@@ -39,8 +39,8 @@ internal class ConfigPipelineTests
 	[Test]
 	public void Resolver_Throws_On_Cycle()
 	{
-		var ex1 = new FakeExecutor(typeof(PageA), typeof(PageB));
-		var ex2 = new FakeExecutor(typeof(PageB), typeof(PageA));
+		var ex1 = new FakeExecutorB(typeof(PageA), typeof(PageB));
+		var ex2 = new FakeExecutorB(typeof(PageB), typeof(PageA));
 		var resolver = new SimpleResolver();
 		Assert.Throws<InvalidOperationException>(() => resolver.Resolve(new IParseExecutor[] { ex1, ex2 }));
 	}
@@ -48,7 +48,7 @@ internal class ConfigPipelineTests
 	[Test]
 	public void Resolver_Throws_On_Missing_Dependency()
 	{
-		var exec = new FakeExecutor(typeof(PageB), typeof(PageA));
+		var exec = new FakeExecutorB(typeof(PageB), typeof(PageA));
 		var resolver = new SimpleResolver();
 		Assert.Throws<InvalidOperationException>(() => resolver.Resolve(new IParseExecutor[] { exec }));
 	}
@@ -286,9 +286,9 @@ internal class ConfigPipelineTests
 	[Test]
 	public void Parser_Returns_Pages_In_Dependency_Order()
 	{
-		var execA = new FakeExecutor(typeof(PageA));
-		var execB = new FakeExecutor(typeof(PageB), typeof(PageA));
-		var execC = new FakeExecutor(typeof(PageC), typeof(PageB));
+		var execA = new FakeExecutorB(typeof(PageA));
+		var execB = new FakeExecutorB(typeof(PageB), typeof(PageA));
+		var execC = new FakeExecutorB(typeof(PageC), typeof(PageB));
 
 		var parser = new DependencyAwareConfigParser(
 			new IParseExecutor[] { execC, execB, execA },
@@ -301,8 +301,8 @@ internal class ConfigPipelineTests
 	[Test]
 	public async Task ParserAsync_Returns_Same_Order()
 	{
-		var execA = new FakeExecutor(typeof(PageA));
-		var execB = new FakeExecutor(typeof(PageB), typeof(PageA));
+		var execA = new FakeExecutorB(typeof(PageA));
+		var execB = new FakeExecutorB(typeof(PageB), typeof(PageA));
 
 		var parser = new DependencyAwareConfigParser(
 			new IParseExecutor[] { execB, execA },
@@ -420,103 +420,6 @@ internal class ConfigPipelineTests
 		Assert.That(async () => await parser.ParseAsync(cts.Token),
 			Throws.TypeOf<OperationCanceledException>()
 				.Or.TypeOf<TaskCanceledException>());
-	}
-
-	#endregion
-
-	#region ───────── helpers ─────────
-
-	private sealed class FakeExecutor : IParseExecutor
-	{
-		public Type TargetType { get; }
-		public IReadOnlyCollection<Type> Dependencies { get; }
-		public PageStub Instance { get; }
-
-		public FakeExecutor(Type pageType, params Type[] deps)
-		{
-			TargetType = pageType;
-			Dependencies = deps;
-			Instance = (PageStub)Activator.CreateInstance(pageType)!;
-		}
-
-		public IConfigPage Parse(IReadOnlyDictionary<Type, IConfigPage> _)
-		{
-			return Instance;
-		}
-
-		public Task<IConfigPage> ParseAsync(IReadOnlyDictionary<Type, IConfigPage> _, CancellationToken __)
-		{
-			return Task.FromResult<IConfigPage>(Instance);
-		}
-	}
-
-	private sealed class FakeSimpleParser : IConfigParser
-	{
-		private readonly IConfigPage[] _pages;
-
-		public FakeSimpleParser(params IConfigPage[] pages)
-		{
-			_pages = pages;
-		}
-
-		public IConfigPage[] Parse()
-		{
-			return _pages;
-		}
-
-		public Task<IConfigPage[]> ParseAsync(CancellationToken _)
-		{
-			return Task.FromResult(_pages);
-		}
-	}
-
-	private sealed class FakeCancelExecutor : IParseExecutor
-	{
-		public Type TargetType => typeof(PageA);
-		public IReadOnlyCollection<Type> Dependencies => Array.Empty<Type>();
-
-		public IConfigPage Parse(IReadOnlyDictionary<Type, IConfigPage> _)
-		{
-			throw new InvalidOperationException();
-		}
-
-		public Task<IConfigPage> ParseAsync(IReadOnlyDictionary<Type, IConfigPage> _, CancellationToken ct)
-		{
-			ct.ThrowIfCancellationRequested();
-			return Task.FromResult<IConfigPage>(new PageA());
-		}
-	}
-
-	private abstract class PageStub : IConfigPage
-	{
-	}
-
-	private sealed class PageA : PageStub
-	{
-	}
-
-	private sealed class PageB : PageStub
-	{
-	}
-
-	private sealed class PageC : PageStub
-	{
-	}
-
-	private sealed class PageD : PageStub
-	{
-	}
-
-	private sealed class PageE : PageStub
-	{
-	}
-
-	private sealed class PageF : PageStub
-	{
-	}
-
-	private sealed class PageG : PageStub
-	{
 	}
 
 	#endregion

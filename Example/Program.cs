@@ -55,6 +55,16 @@ internal class RemoteParser : IConfigParser
 	{
 		return null;
 	}
+
+	public Task<IConfigPage[]> ParseAsync(IProgress<ParseProgress> progress, CancellationToken token)
+	{
+		return null;
+	}
+
+	public void ParseAsync(Action<ParseProgress> progress, Action<IConfigPage[]> onParsed, CancellationToken token)
+	{
+		onParsed?.Invoke(new IConfigPage[]{});
+	}
 }
 
 internal class JsonFileParser : IConfigParser
@@ -74,6 +84,20 @@ internal class JsonFileParser : IConfigParser
 	}
 
 	public Task<IConfigPage[]> ParseAsync(CancellationToken token)
-		=> Task.Run(Parse, token);
+	{
+		return Task.Run(Parse, token);
+	}
+
+	public Task<IConfigPage[]> ParseAsync(IProgress<ParseProgress> progress, CancellationToken token)
+	{
+		return Task.Run(Parse, token);
+	}
+
+	public void ParseAsync(Action<ParseProgress> progress, Action<IConfigPage[]> onParsed, CancellationToken token)
+	{
+		var configPages = Parse();
+		
+		onParsed?.Invoke(configPages);
+	}
 }
 }
